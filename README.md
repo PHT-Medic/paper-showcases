@@ -7,7 +7,7 @@ Showcases for the publication of the personal health train
 Distributed analysis with PHT on imaging data for image segmentation.
 With different learning settings (central vs decentral / with and without balance of data)
 We have access to the de.NBI cloud now with their GPUs and can run the trains, as soon we get the algorithms
-Tobias prepares the algo, such we can use it on the 
+Tobias prepares the algo, such we can use it on the train.
 
 
 ## Next steps:
