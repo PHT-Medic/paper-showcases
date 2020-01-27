@@ -52,7 +52,7 @@ WORKDIR /tmp/tools
 RUN go build -a -buildmode=pie inspect.go
 
 ###
-FROM alpine:3.11.3 AS prod
+FROM frolvlad/alpine-glibc:alpine-3.10 AS prod
 COPY --from=build /tmp/tools/inspect /opt/pht_train/tools/
 RUN apk update -U --no-cache && \
     apk upgrade -U --no-cache && \
