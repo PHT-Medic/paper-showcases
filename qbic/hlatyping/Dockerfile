@@ -43,7 +43,7 @@ WORKDIR /tmp
 RUN apk update -U --no-cache && \
     apk add -U --no-cache \
         git \
-	g++ \
+	    g++ \
         go && \
     git clone https://gitlab.com/PersonalHealthTrain/implementations/germanmii/difuture/train-image/tools.git && sync
 
@@ -54,6 +54,10 @@ RUN go build -a -buildmode=pie inspect.go
 ###
 FROM frolvlad/alpine-glibc:alpine-3.10 AS prod
 COPY --from=build /tmp/tools/inspect /opt/pht_train/tools/
+### Copy nf-core
+COPY --from=build /opt/conda/envs/nf-core-hlatyping-1.1.5 /opt/pht_train/tools/nf-core-hlatyping-1.1.5/
+ENV PATH /opt/pht_train/tools/nf-core-hlatyping-1.1.5/:$PATH
+
 RUN apk update -U --no-cache && \
     apk upgrade -U --no-cache && \
     apk add -U --no-cache file && \
