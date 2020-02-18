@@ -1,0 +1,51 @@
+# Define input channels.
+#train_dir: '/data/segmentation/Task_02Heart/'
+
+train_dir: '/media/herr/Platte/segmentation/Task02_Heart/test/'
+validation_split: 1
+
+images:
+  -
+    name: ct
+    pattern: '*_train.nii.gz'
+
+# Define labels.
+labels:
+  - name: heart
+    pattern: '*_label.nii.gz'
+
+
+# Model configuration and path to save checkpoints:
+#model_path: '/data/models/seg'
+model_path : './models/'
+
+model:
+  in_channels: 1
+  out_channels: 2 # including one channel for the background!
+  f_maps: 64
+
+# Tensorboard logging:
+run: segmentation
+log_dir: './runs'
+print_interval: 10
+
+# Dataloading:
+patch_size: [48, 48, 48]
+train_batchsize: 4
+eval_batchsize: 4
+queue:
+  max_length: 300
+  samples_per_volume: 2
+  num_workers: 15
+  shuffle_subjects: False
+  shuffle_patches: True
+
+# Training parameters:
+learning_rate: 0.0001
+max_epochs: 300
+loss: 'DICE' # in ['DICE', 'CE']
+
+# work_dir = Path('/mnt/share/raheppt1/MelanomCT_Organ/')
+#path_labels = list(work_dir.glob('**/*liver_3mm_low*'))
+#path_labels2 = list(work_dir.glob('**/*spleen_3mm_low*'))
+#path_images = list(work_dir.glob('**/*ct_3mm_low*'))
