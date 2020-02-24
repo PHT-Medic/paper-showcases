@@ -1,15 +1,28 @@
 # Note
 
-WIP! This code is not ready to use.
-
 nf-core-hlatyping baseimage availabe.
-Example how the call looks like, main.py and plot for task b ongoing.
-The expected outcome of optitype over all sites is in results.
+The expected outcome of optitype over all site will be in the workdir.
 
-Next steps to get valid train:
-- Finalize execution of code for valid train (without clinical infos)
-- Talk to Andras to include infos such as Sex and Ethnicity for demo with transmart
+## Usage
+First run:
+```python entrypoint.py -s 1```
+
+Second run:
+```python entrypoint.py -s 2```
+
+Last run:
+```python entrypoint.py -s 1 -l 1```
+
+Info: after each run the folder with results_X will be deleted. At the last execution the intermediate results will be also deleted.
+
+Final plot should look like:
+![Result](HLA_frequencies.pdf "Task B result")
+
+
+Next steps for showcase:
+- deploy station
 - download data (specified ID and analysis from optitype paper)
+- load synthetic data into tranSMART at station
 - define API how data staging is handeld
 - include patient information in analysis
 - prepare station for execution of train
