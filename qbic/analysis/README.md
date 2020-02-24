@@ -19,7 +19,7 @@ Final plot should look like:
 ![Result](HLA_frequencies.pdf "Task B result")
 
 
-Next steps for showcase:
+## Next steps for showcase:
 - deploy station
 - download data (specified ID and analysis from optitype paper)
 - load synthetic data into tranSMART at station
