@@ -40,6 +40,8 @@ def main():
     input: challange, number of stations
     '''
 
+    # TODO include hold-out from train_labels for overall model evaluation
+
     challange = 'Task02_Heart/'
     stations = 3
     base_path = '/media/herr/Platte/segmentation/' + challange
