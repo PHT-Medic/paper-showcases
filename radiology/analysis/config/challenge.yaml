@@ -30,9 +30,9 @@ log_dir: './runs'
 print_interval: 10
 
 # Dataloading:
-patch_size: [48, 48, 48]
-train_batchsize: 4
-eval_batchsize: 4
+patch_size: [48,48,48]
+train_batchsize: 20
+eval_batchsize: 10
 queue:
   max_length: 300
   samples_per_volume: 2
