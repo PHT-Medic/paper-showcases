@@ -19,11 +19,16 @@ Final plot should look like:
 ![Result](HLA_frequencies.pdf "Task B result")
 
 
+### Downloader
+Usage: ```python downloader.py```
+Downloads selection (download.csv) of probes and subjects to `./data`
+
 ## Next steps for showcase:
-- deploy station
-- download data (specified ID and analysis from optitype paper)
-- load synthetic data into tranSMART at station
-- define API how data staging is handeld
-- include patient information in analysis
-- prepare station for execution of train
+- [ ] deploy station
+- [x] write download script
+- [ ] download data (specified ID and analysis from optitype paper)
+- [ ] load synthetic data into tranSMART at station
+- [ ] define API how data staging is handeld
+- [ ] include patient information in analysis
+- [ ] prepare station for execution of train
 

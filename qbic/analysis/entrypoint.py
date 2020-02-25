@@ -164,7 +164,7 @@ def main():
     args = parser.parse_args()
 
     # input hlatyping
-    hla_dir = '/data/reads/*_{1,2}.filt.fastq.gz'
+    hla_dir = '/data/*/sequence_reads/*_{1,2}.filt.fastq.gz'
 
     # input task a
     tmp_res_file_a = 'task_a_result.txt'
