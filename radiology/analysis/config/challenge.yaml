@@ -31,8 +31,8 @@ print_interval: 10
 
 # Dataloading:
 patch_size: [48,48,48]
-train_batchsize: 20
-eval_batchsize: 10
+train_batchsize: 25
+eval_batchsize: 5
 queue:
   max_length: 300
   samples_per_volume: 2

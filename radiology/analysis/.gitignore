@@ -1,2 +1,5 @@
-./models
-./runs
+models/
+runs/
+.idea/
+__pycache__/
+

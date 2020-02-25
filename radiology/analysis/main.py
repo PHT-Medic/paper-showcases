@@ -1,7 +1,6 @@
 import datetime
 import time
-import numpy as np
-import matplotlib.pyplot as plt
+import os
 from tqdm import tqdm
 from pathlib import Path
 
@@ -156,6 +155,8 @@ class Trainer:
     def _save_model(self, epoch, loss):
         print('Saving new checkpoint ...')
         model_path = self.config.model_path
+        if not os.path.exists(model_path):
+            os.makedirs(model_path)
         model_path = Path(model_path)
         model_path = model_path.joinpath(self.run_name+'_model.pt')
         torch.save({
