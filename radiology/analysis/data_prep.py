@@ -43,8 +43,8 @@ def main():
     # TODO include hold-out from train_labels for overall model evaluation
 
     challange = 'Task02_Heart/'
-    stations = 3
-    base_path = '/media/herr/Platte/segmentation/' + challange
+    stations = 1
+    base_path = '/mnt/data/rawdata/MedSegDecathlon/' + challange
     dest_folder = 'pht_preprocessed'
     challange_dest_path = base_path + dest_folder
 
