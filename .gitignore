@@ -1,3 +1,4 @@
 .DS_Store
 .idea
 *.gz
+qbic/train/hlatyping/endpoints/hlatyping/commands/run/.*
