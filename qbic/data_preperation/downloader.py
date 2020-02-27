@@ -3,8 +3,22 @@
 import shutil
 import pandas as pd
 import urllib.request as request
+from urllib.error import URLError
 from contextlib import closing
 import os
+
+
+def download_file(path, file):
+    if os.path.isfile(file):
+        print('{} already downloaded'.format(file))
+    else:
+        print('Saving file to {}'.format(file))
+        try:
+            with closing(request.urlopen(path)) as r:
+                with open(file, 'wb') as f:
+                    shutil.copyfileobj(r, f)
+        except URLError as e:
+            print('Error {} downloading {} '.format(e, file))
 
 
 def main():
@@ -15,7 +29,7 @@ def main():
         probe = subjects.iloc[i, 1]
         pat = subjects.iloc[i, 0]
         station = subjects.iloc[i, 2]
-        station_dir = 'data/station_' + str(station) + '/'
+        station_dir = '/mnt/volume/data/station_' + str(station) + '/'
 
         read_1 = '_1.filt.fastq.gz'
         read_2 = '_2.filt.fastq.gz'
@@ -36,13 +50,7 @@ def main():
             os.makedirs(patient_path)
 
         for path, file in paths:
-            if os.path.isfile(file):
-                print('{} already downlaoded'.format(file))
-            else:
-                print('Saving file to {}'.format(file))
-                with closing(request.urlopen(path)) as r:
-                    with open(file, 'wb') as f:
-                        shutil.copyfileobj(r, f)
+            download_file(path, file)
 
 
 if __name__ == "__main__":
