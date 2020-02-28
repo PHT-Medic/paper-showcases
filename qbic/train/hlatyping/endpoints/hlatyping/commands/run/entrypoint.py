@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 import shutil
@@ -6,10 +6,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
 from subprocess import PIPE, run
+import threading
 
 
 """entrypoint.py: Demonstration of hlatyping pipeline.
 Downstream analysis of HLA typing results of OptiType. Merges previous results if available."""
+
+
+typing_done = threading.Event()
 
 
 def run_hla_typing(path):
@@ -17,10 +21,10 @@ def run_hla_typing(path):
         command = ['nextflow', 'run', 'nf-core/hlatyping', '--reads', path,  '--out-dir', './results']
         result = run(command, stdout=PIPE, stderr=PIPE, universal_newlines=True)
         print(result.returncode, result.stdout, result.stderr)
-        return True
+        typing_done.set()
     except result.stderr as e:
         print('Error hlatyping {}'.format(e))
-        return False
+
 
 
 def compute_freqs(df, key1, key2):
@@ -119,29 +123,32 @@ def task_b(res_name_b, station_id, hla_res_dir, results_df, work_dir):
 
 
 def run_analysis(hla_dir, task_a_in_list, task_b_in_list):
+    thread = threading.Thread(target=run_hla_typing(hla_dir))
 
-    typing = run_hla_typing(hla_dir)
+    thread.start()
+    typing_done.wait()
 
-    if typing:
-        res_name_b = task_b_in_list[0]
-        hla_res_dir = task_b_in_list[1]
-        station_id = task_b_in_list[2]
-        work_dir = task_b_in_list[3]
+    res_name_b = task_b_in_list[0]
+    hla_res_dir = task_b_in_list[1]
+    station_id = task_b_in_list[2]
+    work_dir = task_b_in_list[3]
 
-        # get list of result files from different subdirectories
-        files = list(Path(hla_res_dir).rglob('*.tsv'))
+    # get list of result files from different subdirectories
+    files = list(Path(hla_res_dir).rglob('*.tsv'))
 
-        # create dataframe from OptiType results
+    # create dataframe from OptiType results
+    try:
         results_df = pd.concat([pd.read_csv(f, sep='\t', usecols=["A1", "A2", "B1", "B2", "C1", "C2"]) for f in
                                 files], ignore_index=True)
 
-        # Count allele
-        task_a(task_a_in_list, results_df)
+    except ValueError as e:
+        print(e)
+        exit(1)
+    # Count allele
+    task_a(task_a_in_list, results_df)
 
-        # Plot top 15 alleles
-        task_b(res_name_b, station_id, hla_res_dir, results_df, work_dir)
-    else:
-        print('Error during analysis')
+    # Plot top 15 alleles
+    task_b(res_name_b, station_id, hla_res_dir, results_df, work_dir)
 
 
 def remove(dirs):
@@ -163,7 +170,8 @@ def remove_tmp(dirs, file, last_exec):
 
 def main():
     # input hlatyping
-    hla_dir = '/data/*/sequence_reads/*_{1,2}.filt.fastq.gz'
+    hla_dir = '/data/*/sequence_read/*_{1,2}.filt.fastq.gz'
+    #hla_dir = '"/Users/mariusherr/Documents/GitHub/showcases/qbic/data_preperation/data/station_2/*/sequence_read/*_{1,2}.filt.fastq"'
     station = 1
 
     # input task a
