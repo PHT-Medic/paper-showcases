@@ -18,7 +18,7 @@ typing_done = threading.Event()
 
 def run_hla_typing(path):
     try:
-        command = ['nextflow', 'run', 'nf-core/hlatyping', '--reads', path,  '--out-dir', './results']
+        command = ['nextflow', 'run', 'nf-core/hlatyping', '-r', '1.1.5' '--reads', path,  '--out-dir', './results']
         result = run(command, stdout=PIPE, stderr=PIPE, universal_newlines=True)
         print(result.returncode, result.stdout, result.stderr)
         typing_done.set()
@@ -170,7 +170,8 @@ def remove_tmp(dirs, file, last_exec):
 
 def main():
     # input hlatyping
-    hla_dir = '/data/*/sequence_read/*_{1,2}.filt.fastq.gz'
+    hla_dir = '/mnt/volume/data/test/**/sequence_read/*_{1,2}.filt.fastq.gz'
+    #hla_dir = '/data/*/sequence_read/*_{1,2}.filt.fastq.gz'
     #hla_dir = '"/Users/mariusherr/Documents/GitHub/showcases/qbic/data_preperation/data/station_2/*/sequence_read/*_{1,2}.filt.fastq"'
     station = 1
 
