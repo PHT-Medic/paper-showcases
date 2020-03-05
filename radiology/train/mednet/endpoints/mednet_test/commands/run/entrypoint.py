@@ -221,10 +221,10 @@ class Trainer:
 
                 self.writer.add_scalar('Loss/train',
                                        running_loss / print_interval,
-                                       global_step=global_step)
+                                       global_step=epoch+1)
 
                 self.writer.add_figure('Sample', matplotlib_imshow(inputs, logits, targets),
-                                       global_step=global_step)
+                                       global_step=epoch+1)
                 running_loss = 0.0
 
     def _evaluate(self, epoch):
@@ -257,6 +257,7 @@ class Trainer:
             self.writer.add_scalar(f'Dice/label{k}',
                                    per_channel_dice[k],
                                    global_step=epoch+1)
+        print(f'Eval loss: {eval_loss}')
         return eval_loss
 
     def run(self):

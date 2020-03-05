@@ -1,7 +1,8 @@
 # Define input channels.
+#train_dir: '/data/segmentation/Task_02Heart/'
 
 train_dir: '/data/heart/'
-validation_split: 18
+validation_split: 15
 
 images:
   -
@@ -15,8 +16,9 @@ labels:
 
 
 # Model configuration and path to save checkpoints:
-#model_path: '/data/models/seg'
-model_path : './models/'
+#model_path: '/data/models/seg'#
+#TODO change for real analysis later
+model_path : '/opt/pht_train/models/'
 
 model:
   in_channels: 1
@@ -25,12 +27,12 @@ model:
 
 # Tensorboard logging:
 run: segmentation
-log_dir: './runs'
+log_dir: '/opt/pht_train/runs'
 print_interval: 10
 
 # Dataloading:
-patch_size: [48,48,48]
-train_batchsize: 25
+patch_size: [100,100,50]
+train_batchsize: 5
 eval_batchsize: 5
 queue:
   max_length: 300
@@ -43,3 +45,9 @@ queue:
 learning_rate: 0.0001
 max_epochs: 300
 loss: 'DICE' # in ['DICE', 'CE']
+
+# work_dir = Path('/mnt/share/raheppt1/MelanomCT_Organ/')
+#path_labels = list(work_dir.glob('**/*liver_3mm_low*'))
+#path_labels2 = list(work_dir.glob('**/*spleen_3mm_low*'))
+#path_images = list(work_dir.glob('**/*ct_3mm_low*'))
+
