@@ -8,23 +8,17 @@ from pathlib import Path
 from subprocess import PIPE, run
 import threading
 
-
 """entrypoint.py: Demonstration of hlatyping pipeline.
 Downstream analysis of HLA typing results of OptiType. Merges previous results if available."""
 
+result_available = threading.Event()
 
-typing_done = threading.Event()
 
-
-def run_hla_typing(path):
-    try:
-        command = ['nextflow', 'run', 'nf-core/hlatyping', '-r', '1.1.5' '--reads', path,  '--out-dir', './results']
-        result = run(command, stdout=PIPE, stderr=PIPE, universal_newlines=True)
-        print(result.returncode, result.stdout, result.stderr)
-        typing_done.set()
-    except result.stderr as e:
-        print('Error hlatyping {}'.format(e))
-
+def run_hla_typing(path, res_folder):
+    command = ['nextflow', 'run', 'nf-core/hlatyping', '-r', '1.1.5', '--reads', path,  '--out-dir', res_folder]
+    result = run(command, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+    print(result.returncode, result.stdout, result.stderr)
+    result_available.set()
 
 
 def compute_freqs(df, key1, key2):
@@ -66,7 +60,7 @@ def generate_plot(a_freqs, b_freqs, c_freqs, outdir):
 
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
 
-    fig.savefig(os.path.join(outdir, 'HLA_frequencies.pdf'))
+    fig.savefig(os.path.join(outdir, '/opt/pht_train/endpoints/hlatyping/commands/run/HLA_frequencies.pdf'))
     print('Task b: plotted results')
 
 
@@ -122,33 +116,35 @@ def task_b(res_name_b, station_id, hla_res_dir, results_df, work_dir):
                   work_dir)
 
 
-def run_analysis(hla_dir, task_a_in_list, task_b_in_list):
-    thread = threading.Thread(target=run_hla_typing(hla_dir))
+def run_analysis(hla_dir, res_folder, task_a_in_list, task_b_in_list):
+    thread = threading.Thread(target=run_hla_typing(hla_dir, res_folder))
 
     thread.start()
-    typing_done.wait()
+    result_available.wait()
 
-    res_name_b = task_b_in_list[0]
-    hla_res_dir = task_b_in_list[1]
-    station_id = task_b_in_list[2]
-    work_dir = task_b_in_list[3]
+    while not result_available:
+        print('hla typing made')
+        res_name_b = task_b_in_list[0]
+        hla_res_dir = task_b_in_list[1]
+        station_id = task_b_in_list[2]
+        work_dir = task_b_in_list[3]
 
-    # get list of result files from different subdirectories
-    files = list(Path(hla_res_dir).rglob('*.tsv'))
+        # get list of result files from different subdirectories
+        files = list(Path(hla_res_dir).rglob('*.tsv'))
 
-    # create dataframe from OptiType results
-    try:
-        results_df = pd.concat([pd.read_csv(f, sep='\t', usecols=["A1", "A2", "B1", "B2", "C1", "C2"]) for f in
-                                files], ignore_index=True)
+        # create dataframe from OptiType results
+        try:
+            results_df = pd.concat([pd.read_csv(f, sep='\t', usecols=["A1", "A2", "B1", "B2", "C1", "C2"]) for f in
+                                    files], ignore_index=True)
 
-    except ValueError as e:
-        print(e)
-        exit(1)
-    # Count allele
-    task_a(task_a_in_list, results_df)
+        except ValueError as e:
+            print(e)
+            exit(1)
+        # Count allele
+        task_a(task_a_in_list, results_df)
 
-    # Plot top 15 alleles
-    task_b(res_name_b, station_id, hla_res_dir, results_df, work_dir)
+        # Plot top 15 alleles
+        task_b(res_name_b, station_id, hla_res_dir, results_df, work_dir)
 
 
 def remove(dirs):
@@ -170,32 +166,30 @@ def remove_tmp(dirs, file, last_exec):
 
 def main():
     # input hlatyping
-    hla_dir = '/mnt/volume/data/test/**/sequence_read/*_{1,2}.filt.fastq.gz'
-    #hla_dir = '/data/*/sequence_read/*_{1,2}.filt.fastq.gz'
-    #hla_dir = '"/Users/mariusherr/Documents/GitHub/showcases/qbic/data_preperation/data/station_2/*/sequence_read/*_{1,2}.filt.fastq"'
+    hla_dir = '/data/*/sequence_read/*_{1,2}.filt.fastq.gz'
     station = 1
 
     # input task a
     tmp_res_file_a = 'task_a_result.txt'
     allele = 'A*11:01'
     sub_allele = 'A1'
-    out_dir = '/opt/pht_train/'
+    out_dir = '/opt/pht_train/endpoints/hlatyping/commands/run/'
     task_a_in = [tmp_res_file_a, allele, sub_allele, out_dir]
 
     # input task b
-    res_folder = '/opt/pht_train/results_' + str(station)
+    res_folder = out_dir + 'results_' + str(station)
     res_dir = res_folder + '/optitype/'
     tmp_res_file_b = 'task_b_tmp_result.csv'
     task_b_in = [tmp_res_file_b, res_dir, station, out_dir]
 
     # run analysis and tasks
-    run_analysis(hla_dir, task_a_in, task_b_in)
+    run_analysis(hla_dir, res_folder, task_a_in, task_b_in)
 
     # remove files from hlatyping
     # TODO when used on workstation only the result folder necessary to remove
-    folders_to_remove = ['/opt/pht_train/work', res_folder]
+    folders_to_remove = ['./work', res_folder]
 
-    last_exec = True
+    last_exec = False
     remove_tmp(folders_to_remove, tmp_res_file_b, last_exec)
 
 
