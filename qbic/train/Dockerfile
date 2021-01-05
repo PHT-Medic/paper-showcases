@@ -1,5 +1,5 @@
 # local dev
-FROM nf-core:master
-# productive afterwards
-# FROM harbor.lukaszimmermann.dev/pht_master/nf-core:hlatyping
+FROM harbor.personalhealthtrain.de/pht_master/master:nfdemo
+
 COPY hlatyping/ /opt/pht_train/
+ENTRYPOINT ["python3", "/opt/pht_train/endpoints/hlatyping/commands/run/entrypoint.py"]

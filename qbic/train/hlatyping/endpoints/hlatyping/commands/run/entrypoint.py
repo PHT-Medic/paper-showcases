@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+
 import os
 import shutil
 import pandas as pd
@@ -8,17 +9,9 @@ from pathlib import Path
 from subprocess import PIPE, run
 import threading
 
-"""entrypoint.py: Demonstration of hlatyping pipeline.
-Downstream analysis of HLA typing results of OptiType. Merges previous results if available."""
-
-result_available = threading.Event()
-
-
-def run_hla_typing(path, res_folder):
-    command = ['nextflow', 'run', 'nf-core/hlatyping', '-r', '1.1.5', '--reads', path,  '--out-dir', res_folder]
-    result = run(command, stdout=PIPE, stderr=PIPE, universal_newlines=True)
-    print(result.returncode, result.stdout, result.stderr)
-    result_available.set()
+import asyncio
+from train_lib.fhir.FhirLoading import genome_query
+from train_lib.train.NfcoreTrain import Train
 
 
 def compute_freqs(df, key1, key2):
@@ -52,147 +45,155 @@ def generate_plot(a_freqs, b_freqs, c_freqs, outdir):
     ax1.set(ylabel="HLA-A")
     ax2.set(ylabel="HLA-B")
     ax3.set(ylabel="HLA-C")
+    fig.text(0, 0.5, 'Counts', va='center', rotation='vertical')
 
     plt.suptitle('Top 15 HLA allele counts')
 
     handles, labels = ax3.get_legend_handles_labels()
-    fig.legend(handles, [l.split("_")[-1] for l in labels], loc='upper right')
-
-    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-
-    fig.savefig(os.path.join(outdir, '/opt/pht_train/endpoints/hlatyping/commands/run/HLA_frequencies.pdf'))
+    fig.legend(handles, ["Station " + l.split("_")[-1] for l in labels], loc='upper right')
+    fig.tight_layout()
+    # plt.show()
+    fig.savefig(os.path.join(outdir, 'task_b.pdf'))  # TODO /opt/pht_train/endpoints/hlatyping/commands/run
     print('Task b: plotted results')
 
 
-def task_a(in_list, patients):
-    res_name = in_list[0]
-    allele = in_list[1]
-    section = in_list[2]
-    out_dir = in_list[3]
-    sub_group = patients[section].value_counts()
+def remove(dir):
+    try:
+        print('Delete: ' + dir)
+        shutil.rmtree(dir)
+    except OSError as e:
+        print('Error: %s - %s.' % (e.filename, e.strerror))
 
-    results_available = res_name in os.listdir(out_dir)
 
-    if results_available:
-        with open(res_name, 'r') as f:
-            allele_count = int(f.read())
-        f.close()
+def hla_typing(in_dir, out_dir, work_dir, result_available):
+    os.chdir(out_dir)
+    command = ['nextflow', 'run', 'nf-core/hlatyping', '-r', '1.2.0', '--input', in_dir, '--out-dir', out_dir]
+    if os.path.isdir(out_dir + '/results/optitype'):
+        print('Use previous computed HLAtyping results')
+    elif os.path.isdir(work_dir):
+        print("Resume cached hlatyping ... ")
+        command.append('-resume')
+        result = run(command, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+        print(result.returncode, result.stdout, result.stderr)
     else:
-        allele_count = 0
+        print("Start hlatyping ... may take a while")
+
+        result = run(command, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+        print(result.returncode, result.stdout, result.stderr)
+        # print(command)
+    result_available.set()
+
+
+if __name__ == "__main__":
+    train = Train(results='analysis_results.pkl', query='query.json')  # /opt/pht_train/results/
+    print("Start loading patients ... may take a while")
+    queries = train.load_queries()
+    query = next(iter(queries.values()))
+    print(query)
+
+    loop = asyncio.get_event_loop()
+    pat_df = loop.run_until_complete(genome_query(query))
+    input_dir = pat_df['root_path'].value_counts().idxmax() + '/'
+    print("FHIR input dir {}".format(input_dir))
+    # input_dir = '/data/nftrain-test/*/sequence_read/*_{1,2}.filt.fastq.gz' # test dir pht-demo server
+    print(input_dir)
+    results = train.load_results()
+
+    print('Previous results:\n' + str(results))
+    station = input_dir[-2]
+
+    # HLAtyping
+    result_available = threading.Event()
+
+    input_dir = "/mnt/vdb/data/station_" + station + "/*/sequence_read/*_{1,2}.filt.fastq.gz"
+
+    out_dir = "/mnt/vdb/data/exec_" + station
+
+    if not os.path.isdir(out_dir):
+        print("Create: {}".format(out_dir))
+        os.makedirs(out_dir)
+    print("Exists: {}".format(out_dir))
+    work_dir = out_dir + "/work"
+
+    # get list of result files from different subdirectories
+    results_dir = out_dir + "/results/optitype/"
+    # print(results_dir)
+
+    thread = threading.Thread(target=hla_typing(input_dir, out_dir, work_dir, result_available))
+
+    thread.start()
+    result_available.wait()
+    print('HLA typing finished')
+
+    files = list(Path(results_dir).rglob('*.tsv'))
+    # print(files)
+    try:
+        # create dataframe from OptiType results
+        results_df = pd.concat([pd.read_csv(f, sep='\t', usecols=["A1", "A2", "B1", "B2", "C1", "C2"]) for f in
+                                files], ignore_index=True)
+    except:
+        print("No results from hlatyping")
+        exit(1)
+
+    print(results_df.describe())
+
+    # task a
+    allele = 'B*35:01'  # prev A*11:01
+    sub_allele = ['B1', 'B2']
+    # out_dir = '/opt/pht_train/endpoints/hlatyping/commands/run/'
 
     print('Task a: Check allele occurrences')
+    local_res = 0
+    for group in sub_allele:
+        sub_group = results_df[group].value_counts()
+        try:
+            local_res += int(sub_group[allele])
+        except Exception as e:
+            print(e)
+            print("No occurence of {} on allel {}".format(allele, group))
 
-    allele_count += int(sub_group[allele])
-    final_res = str(allele_count)
+    he_secure_add = train.secure_addition(local_res)
+    print("Secure addition added local result {} in encrypted format and saved:\n{}".format(local_res, he_secure_add))
 
-    with open(res_name, 'w') as f:
-        f.write('{}\n'.format(final_res))
-    f.close()
-    print(final_res)
-
-
-def task_b(res_name_b, station_id, hla_res_dir, results_df, work_dir):
-    results_available = res_name_b in os.listdir(work_dir)
+    # task b - Plot top 15 alleles
 
     # store station specific frequencies for later
     a_freqs = compute_freqs(results_df, "A1", "A2")
     b_freqs = compute_freqs(results_df, "B1", "B2")
     c_freqs = compute_freqs(results_df, "C1", "C2")
 
-    frame_data = {'A_{}'.format(station_id): a_freqs, 'B_{}'.format(station_id): b_freqs,
-                  'C_{}'.format(station_id): c_freqs}
+    frame_data = {'A_{}'.format(station): a_freqs, 'B_{}'.format(station): b_freqs,
+                  'C_{}'.format(station): c_freqs}
 
-    dataframe = pd.DataFrame(frame_data)
-    if results_available:
-        previous_result = pd.read_csv(os.path.join(work_dir, res_name_b), index_col=0)
-        merged_result = previous_result.combine_first(dataframe)
-    else:
-        merged_result = dataframe
+    plot_df = pd.DataFrame(frame_data)
 
-    merged_result.to_csv(os.path.join(hla_res_dir, res_name_b))
+    try:
+        previous_result = results['analysis']['task_b']
+        merged_result = previous_result.combine_first(plot_df)
+    except KeyError:
+        print("Task b: No previous results to load")
+        merged_result = plot_df
+
+    # os.chdir(train_work_dir)
+
+    # merged_result.to_csv(os.path.join(results_dir, tmp_res_file_b))
     generate_plot(merged_result.filter(like='A*', axis=0).filter(like='A_', axis=1),
                   merged_result.filter(like='B*', axis=0).filter(like='B_', axis=1),
                   merged_result.filter(like='C*', axis=0).filter(like='C_', axis=1),
-                  work_dir)
+                  '/opt/pht_results/')  # old: /data/station_1/ new: out dir train = /opt/pht_results/
 
-
-def run_analysis(hla_dir, res_folder, task_a_in_list, task_b_in_list):
-    thread = threading.Thread(target=run_hla_typing(hla_dir, res_folder))
-
-    thread.start()
-    result_available.wait()
-
-    while not result_available:
-        print('hla typing made')
-        res_name_b = task_b_in_list[0]
-        hla_res_dir = task_b_in_list[1]
-        station_id = task_b_in_list[2]
-        work_dir = task_b_in_list[3]
-
-        # get list of result files from different subdirectories
-        files = list(Path(hla_res_dir).rglob('*.tsv'))
-
-        # create dataframe from OptiType results
-        try:
-            results_df = pd.concat([pd.read_csv(f, sep='\t', usecols=["A1", "A2", "B1", "B2", "C1", "C2"]) for f in
-                                    files], ignore_index=True)
-
-        except ValueError as e:
-            print(e)
-            exit(1)
-        # Count allele
-        task_a(task_a_in_list, results_df)
-
-        # Plot top 15 alleles
-        task_b(res_name_b, station_id, hla_res_dir, results_df, work_dir)
-
-
-def remove(dirs):
-    for d in dirs:
-        try:
-            shutil.rmtree(d)
-            print('Deleted: ' + d)
-        except OSError as e:
-            print('Error: %s - %s.' % (e.filename, e.strerror))
-
-
-def remove_tmp(dirs, file, last_exec):
-    if last_exec:
-        remove(dirs)
-        os.remove(file)
+    # clean up
+    # remove(work_dir) # TODO uncomment later
+    results['analysis']['task_a'] = he_secure_add
+    if station == str(3):
+        print("Final execution")
+        results['analysis']['task_b'] = "Hidden value"
     else:
-        remove(dirs)
+        print("Keep intermediate task b data")
+        results['analysis']['task_b'] = merged_result
 
+    train.save_results(results=results)
+    print('New results:\n' + str(results) + "\nupdated and files saved")
 
-def main():
-    # input hlatyping
-    hla_dir = '/data/*/sequence_read/*_{1,2}.filt.fastq.gz'
-    station = 1
-
-    # input task a
-    tmp_res_file_a = 'task_a_result.txt'
-    allele = 'A*11:01'
-    sub_allele = 'A1'
-    out_dir = '/opt/pht_train/endpoints/hlatyping/commands/run/'
-    task_a_in = [tmp_res_file_a, allele, sub_allele, out_dir]
-
-    # input task b
-    res_folder = out_dir + 'results_' + str(station)
-    res_dir = res_folder + '/optitype/'
-    tmp_res_file_b = 'task_b_tmp_result.csv'
-    task_b_in = [tmp_res_file_b, res_dir, station, out_dir]
-
-    # run analysis and tasks
-    run_analysis(hla_dir, res_folder, task_a_in, task_b_in)
-
-    # remove files from hlatyping
-    # TODO when used on workstation only the result folder necessary to remove
-    folders_to_remove = ['./work', res_folder]
-
-    last_exec = False
-    remove_tmp(folders_to_remove, tmp_res_file_b, last_exec)
-
-
-if __name__ == "__main__":
-    main()
-
+    del queries[next(iter(queries))]  # delete first entry
+    train.save_queries(queries)
