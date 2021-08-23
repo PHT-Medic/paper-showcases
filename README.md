@@ -40,7 +40,7 @@ The deNBI Ubuntu 20.04.1 LTS cloud instance with 28 Intel(R) Xeon(R) Gold 6140 C
 required a total execution time of 44h and 49 min for the nf-core hlaytping train. The ﬁnal results have a size of 22KB
 and took below 1s at each station to decrypt and encrypt. 
 The execution time stations specific was:
-![runtime nf-core demo](images/nf-core-time.png)
+![runtime nf-core demo](images/nf-core-time.png){width=50%}
 
 ### Results
 Encrypted results were downloaded using the UI. With the local installed offline-tool the decryption can be done.
