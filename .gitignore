@@ -3,3 +3,4 @@
 *.gz
 qbic/train/hlatyping/endpoints/hlatyping/commands/run/.*
 *.pyc
+*archive/
