@@ -46,7 +46,7 @@ The execution time stations specific was:
 Encrypted results were downloaded using the UI. With the local installed offline-tool the decryption can be done.
 The decrypted results are:
 
-1. `24379966024370620994451437437625835596482603880750514638237371093577439182139` result can be decrypted by using the offline tool, and the homomorphic encrypted number reveals 24 occurrences.
+1. `24379966024370620994451437437625835596482603880750514638237371093577439182139` result can be decrypted by using the desktop app, and the Paillier homomorphic encrypted number reveals 24 occurrences.
 2. The decrypted pdf is included in `nf-core/results/decrypted_task_2.pdf`
 
 ## ISIC-2019
